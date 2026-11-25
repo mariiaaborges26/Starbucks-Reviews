@@ -264,7 +264,7 @@ def main(page: ft.Page):
         atualizar_lista()
 
     mostrar_ecra_login()
-
+import os
 ft.run(
     main,
     host="0.0.0.0",
