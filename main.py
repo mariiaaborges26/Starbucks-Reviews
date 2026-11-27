@@ -25,11 +25,13 @@ def traduzir_texto(texto, idioma_destino):
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             resp = urllib.request.urlopen(req, timeout=5)
             dados = json.loads(resp.read().decode("utf-8"))
-            trad = "".join(parte[0] for parte in dados[0] if parte[0])
+            blocos = next(iter(dados), [])
+            trad = "".join(next(iter(b), "") for b in blocos if b)
             cache_traducoes[chave] = trad if trad else texto
         except Exception:
             return texto
     return cache_traducoes[chave]
+
 
 
 TEXTOS = {
