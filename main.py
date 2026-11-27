@@ -11,7 +11,6 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 cache_traducoes = {}
-
 def traduzir_texto(texto, idioma_destino):
     if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
         return texto
@@ -22,6 +21,7 @@ def traduzir_texto(texto, idioma_destino):
         except Exception:
             return texto
     return cache_traducoes[chave]
+
 
 TEXTOS = {
     "pt": {
