@@ -75,7 +75,8 @@ TEXTOS = {
         "Bebida Fria": "Bebida Fria",
         "Comida / Pastelaria": "Comida / Pastelaria",
         "Anual": "Anual",
-        "Sazonal": "Sazonal"
+        "Sazonal": "Sazonal",
+        "filtros": "Filtros"
     },
     "en": {
         "user": "Username",
@@ -120,7 +121,8 @@ TEXTOS = {
         "Bebida Fria": "Cold Drink",
         "Comida / Pastelaria": "Food / Pastry",
         "Anual": "Year-round",
-        "Sazonal": "Seasonal"
+        "Sazonal": "Seasonal",
+        "filtros": "Filters"
     }
 }
 
@@ -421,7 +423,7 @@ def main(page: ft.Page):
             ft.dropdown.Option("Anual", t("Anual")),
             ft.dropdown.Option("Sazonal", t("Sazonal"))
         ]
-
+        painel_filtros = ft.Row([filtro_cat, filtro_epoca], visible=False)
         page.clean()
         carregar_catalogo()
         page.add(
@@ -437,8 +439,18 @@ def main(page: ft.Page):
             ft.Row([botao_publicar, botao_cancelar]),
             ft.Divider(height=15, color="#00704A"),
             barra_pesquisa,
-            ft.Row([filtro_cat, filtro_epoca]),
-            lista_visual
+            ft.Row([
+                ft.Container(barra_pesquisa, expand=True),
+                ft.OutlinedButton(
+                    t("filtros"),
+                    icon=ft.Icons.FILTER_LIST,
+                    height=48,
+                    on_click=lambda e: setattr(painel_filtros, "visible", not painel_filtros.visible) or page.update()
+    )
+]),
+painel_filtros,
+lista_visual
+
         )
         atualizar_lista()
 
