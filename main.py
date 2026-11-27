@@ -13,62 +13,40 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 cache_traducoes = {}
-
 def traduzir_texto(texto, idioma_destino):
-    if not texto or idioma_destino == "pt":
+    if not texto or texto in ["Sem comentário.", "No comment."]:
         return texto
-
-    if texto in ["Sem comentário.", "No comment."]:
-        return t("sem_coment")
 
     chave = (texto, idioma_destino)
     if chave in cache_traducoes:
         return cache_traducoes[chave]
 
-    idioma_origem = "pt" if idioma_destino == "en" else "en"
+    origem = "pt" if idioma_destino == "en" else "en"
     q = urllib.parse.quote(texto)
 
-    # Tentativa 1: Google Translate (endpoint público)
     try:
-        url1 = (
-            "https://translate.googleapis.com/translate_a/single"
-            f"?client=gtx&sl={idioma_origem}&tl={idioma_destino}&dt=t&q={q}"
-        )
-        req1 = urllib.request.Request(
-            url1,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        resp1 = urllib.request.urlopen(req1, timeout=8)
-        dados1 = json.loads(resp1.read().decode("utf-8"))
-        traducao = "".join(
-            bloco[0] for bloco in dados1[0] if bloco and bloco[0]
-        )
+        url1 = ("https://translate.googleapis.com/translate_a/single"
+                f"?client=gtx&sl={origem}&tl={idioma_destino}&dt=t&q={q}")
+        req1 = urllib.request.Request(url1, headers={"User-Agent": "Mozilla/5.0"})
+        dados1 = json.loads(urllib.request.urlopen(req1, timeout=8).read().decode("utf-8"))
+        trad = "".join(b[0] for b in dados1[0] if b and b[0])
+        if trad.strip():
+            cache_traducoes[chave] = trad
+            return trad
+    except Exception as ex:
+        print("ERRO GOOGLE:", repr(ex), flush=True)
 
-        if traducao.strip():
-            cache_traducoes[chave] = traducao
-            return traducao
-    except Exception:
-        pass
-
-    # Tentativa 2: MyMemory
     try:
-        url2 = (
-            "https://api.mymemory.translated.net/get"
-            f"?q={q}&langpair={idioma_origem}|{idioma_destino}"
-        )
-        req2 = urllib.request.Request(
-            url2,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        resp2 = urllib.request.urlopen(req2, timeout=8)
-        dados2 = json.loads(resp2.read().decode("utf-8"))
-        traducao = dados2.get("responseData", {}).get("translatedText", "")
-
-        if traducao.strip():
-            cache_traducoes[chave] = traducao
-            return traducao
-    except Exception:
-        pass
+        url2 = ("https://api.mymemory.translated.net/get"
+                f"?q={q}&langpair={origem}|{idioma_destino}")
+        req2 = urllib.request.Request(url2, headers={"User-Agent": "Mozilla/5.0"})
+        dados2 = json.loads(urllib.request.urlopen(req2, timeout=8).read().decode("utf-8"))
+        trad = dados2.get("responseData", {}).get("translatedText", "")
+        if trad.strip():
+            cache_traducoes[chave] = trad
+            return trad
+    except Exception as ex:
+        print("ERRO MYMEMORY:", repr(ex), flush=True)
 
     return texto
 
