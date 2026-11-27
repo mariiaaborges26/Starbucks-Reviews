@@ -410,9 +410,8 @@ def main(page: ft.Page):
 
     mostrar_ecra_login()
 
-ft.app(
-    target=main,
-    view=ft.AppView.WEB_BROWSER,
+ft.run(
+    main,
     host="0.0.0.0",
     port=int(os.environ.get("PORT", 8000)),
     assets_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
