@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Starbucks Reviews",
   "short_name": "Starbucks",
-  "description": "Aplicação para avaliar, pesquisar e partilhar opiniões sobre bebidas e comidas da Starbucks.",
+  "description": "Aplicação para avaliar e partilhar opiniões sobre bebidas e comidas.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
