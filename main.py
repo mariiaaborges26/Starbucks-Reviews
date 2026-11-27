@@ -324,7 +324,7 @@ def main(page: ft.Page):
         supabase.table("reviews").delete().eq("id", rid).execute()
         atualizar_lista()
 
-    def atualizar_lista(e=None):
+       def atualizar_lista(e=None):
         lista_visual.controls.clear()
         nome_logado = sessao["utilizador"].lower()
         termo = barra_pesquisa.value.strip().lower()
@@ -357,6 +357,7 @@ def main(page: ft.Page):
                 ], spacing=4)
             ))
         page.update()
+
 
     def guardar_review(e):
         if not dropdown_produto.value:
