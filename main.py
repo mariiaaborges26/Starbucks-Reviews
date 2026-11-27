@@ -3,7 +3,9 @@ import re
 import flet as ft
 import hashlib
 from supabase import create_client, Client
-from deep_translator import MyMemoryTranslator
+import json
+import urllib.request
+import urllib.parse
 
 SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
 SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
@@ -11,13 +13,19 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 cache_traducoes = {}
+
 def traduzir_texto(texto, idioma_destino):
     if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
         return texto
     chave = (texto, idioma_destino)
     if chave not in cache_traducoes:
         try:
-            cache_traducoes[chave] = MyMemoryTranslator(source="pt-PT", target="gb-EN").translate(texto)
+            q = urllib.parse.quote(texto)
+            url = f"https://translated.net{q}&langpair=pt|en"
+            req = urllib.request.urlopen(url, timeout=4)
+            dados = json.loads(req.read().decode("utf-8"))
+            trad = dados.get("responseData", {}).get("translatedText")
+            cache_traducoes[chave] = trad if trad else texto
         except Exception:
             return texto
     return cache_traducoes[chave]
