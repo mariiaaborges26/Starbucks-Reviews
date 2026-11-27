@@ -3,7 +3,7 @@ import re
 import flet as ft
 import hashlib
 from supabase import create_client, Client
-from deep_translator import GoogleTranslator
+from deep_translator import MyMemoryTranslator
 
 SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
 SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
@@ -17,7 +17,7 @@ def traduzir_texto(texto, idioma_destino):
     chave = (texto, idioma_destino)
     if chave not in cache_traducoes:
         try:
-            cache_traducoes[chave] = GoogleTranslator(source="auto", target="en").translate(texto)
+            cache_traducoes[chave] = MyMemoryTranslator(source="pt-PT", target="gb-EN").translate(texto)
         except Exception:
             return texto
     return cache_traducoes[chave]
