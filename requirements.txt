@@ -1,2 +1,2 @@
 flet
-supabase
+supabase>=2.10.0
