@@ -12,43 +12,31 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-cache_traducoes = {}
-def traduzir_texto(texto, idioma_destino):
-    if not texto or texto in ["Sem comentário.", "No comment."]:
+def traduzir_texto(texto, origem, destino):
+    if not texto or origem == destino:
         return texto
-
-    chave = (texto, idioma_destino)
-    if chave in cache_traducoes:
-        return cache_traducoes[chave]
-
-    origem = "pt" if idioma_destino == "en" else "en"
     q = urllib.parse.quote(texto)
-
     try:
-        url1 = ("https://translate.googleapis.com/translate_a/single"
-                f"?client=gtx&sl={origem}&tl={idioma_destino}&dt=t&q={q}")
-        req1 = urllib.request.Request(url1, headers={"User-Agent": "Mozilla/5.0"})
-        dados1 = json.loads(urllib.request.urlopen(req1, timeout=8).read().decode("utf-8"))
-        trad = "".join(b[0] for b in dados1[0] if b and b[0])
+        url = ("https://api.mymemory.translated.net/get"
+               f"?q={q}&langpair={origem}|{destino}")
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        dados = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8"))
+        trad = dados.get("responseData", {}).get("translatedText", "")
         if trad.strip():
-            cache_traducoes[chave] = trad
-            return trad
-    except Exception as ex:
-        print("ERRO GOOGLE:", repr(ex), flush=True)
-
-    try:
-        url2 = ("https://api.mymemory.translated.net/get"
-                f"?q={q}&langpair={origem}|{idioma_destino}")
-        req2 = urllib.request.Request(url2, headers={"User-Agent": "Mozilla/5.0"})
-        dados2 = json.loads(urllib.request.urlopen(req2, timeout=8).read().decode("utf-8"))
-        trad = dados2.get("responseData", {}).get("translatedText", "")
-        if trad.strip():
-            cache_traducoes[chave] = trad
             return trad
     except Exception as ex:
         print("ERRO MYMEMORY:", repr(ex), flush=True)
-
-    return texto
+    try:
+        url = ("https://translate.googleapis.com/translate_a/single"
+               f"?client=gtx&sl={origem}&tl={destino}&dt=t&q={q}")
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        dados = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8"))
+        trad = "".join(b[0] for b in dados[0] if b and b[0])
+        if trad.strip():
+            return trad
+    except Exception as ex:
+        print("ERRO GOOGLE:", repr(ex), flush=True)
+    return None
 
 TEXTOS = {
     "pt": {
@@ -378,7 +366,10 @@ def main(page: ft.Page):
             if filtro_epoca.value != "Todas" and info_prod["epoca"] != filtro_epoca.value:
                 continue
 
-            texto_coment = t("sem_coment") if r["comentario"] in ["Sem comentário.", "No comment."] else traduzir_texto(r["comentario"], sessao["idioma"])
+                        if r["comentario"] in ["Sem comentário.", "No comment."]:
+                texto_coment = t("sem_coment")
+            else:
+                texto_coment = r.get("comentario_" + sessao["idioma"]) or r["comentario"]
 
             acoes = ft.Row(spacing=0)
             if r["utilizador"].lower() == nome_logado:
@@ -402,7 +393,19 @@ def main(page: ft.Page):
             dropdown_produto.error_text = t("err_esc_prod"); page.update(); return
         dropdown_produto.error_text = None
         info_prod = next((p for p in catalogo_produtos if p["nome"] == dropdown_produto.value), {"categoria": "Bebida Fria"})
-        dados = {"utilizador": sessao["utilizador"], "produto": dropdown_produto.value, "categoria": info_prod["categoria"], "nota": nota.value, "comentario": comentario.value.strip() or "Sem comentário."}
+                texto = comentario.value.strip()
+        idioma = sessao["idioma"]
+        outro = "en" if idioma == "pt" else "pt"
+        trad = traduzir_texto(texto, idioma, outro) if texto else None
+        dados = {
+            "utilizador": sessao["utilizador"],
+            "produto": dropdown_produto.value,
+            "categoria": info_prod["categoria"],
+            "nota": nota.value,
+            "comentario": texto or "Sem comentário.",
+            "comentario_pt": (texto if idioma == "pt" else trad) if texto else None,
+            "comentario_en": (texto if idioma == "en" else trad) if texto else None,
+        }
         if id_edicao[0] is not None:
             supabase.table("reviews").update(dados).eq("id", id_edicao[0]).execute(); cancelar_edicao()
         else:
