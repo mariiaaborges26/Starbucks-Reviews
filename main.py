@@ -252,6 +252,12 @@ def main(page: ft.Page):
         campo_user.label = t("user")
         campo_pin.label = t("pin")
         campo_seguranca.label = t("rec")
+        if mensagem_erro.value in ["Palavra-passe incorreta!", "Incorrect password!"]:
+            mensagem_erro.value = t("err_pin_inc")
+        elif mensagem_erro.value in ["Preencha o nome e a palavra-passe.", "Please enter your username and password."]:
+            mensagem_erro.value = t("err_vazio")
+        elif mensagem_erro.value in ["Utilizador não encontrado. Clique em 'Criar Nova Conta'.", "User not found. Click 'Create New Account'."]:
+            mensagem_erro.value = t("err_nao_enc")
         page.clean()
         page.add(
             ft.Row([ft.Container(expand=True), botao_idioma()]),
