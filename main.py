@@ -347,7 +347,8 @@ def main(page: ft.Page):
                 content=ft.Column([
                     ft.Row([ft.Text(r["produto"], weight=ft.FontWeight.BOLD, size=15, color="#00704A", expand=True), ft.Text("⭐" * int(r["nota"])), acoes]),
                     ft.Text(f"{info_prod['categoria']} ({info_prod['epoca']}) • {t('por')} {r['utilizador']}", size=12, color=ft.Colors.GREY_700),
-                    ft.Text(r["comentario"], size=14)
+                    ft.Text(traduzir_comentario(r["comentario"], sessao["idioma"]), size=14)
+
                 ], spacing=4)
             ))
         page.update()
