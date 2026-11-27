@@ -256,8 +256,9 @@ def main(page: ft.Page):
         carregar_catalogo(selecionar_nome=nome)
 
     txt_add_titulo = ft.Text(weight=ft.FontWeight.BOLD, color="#00704A")
-    btn_guardar_menu = ft.Button(bgcolor="#00704A", color=ft.Colors.WHITE, on_click=guardar_novo_produto)
-    btn_fechar_menu = ft.TextButton(on_click=lambda e: setattr(painel_novo_produto, "visible", False) or page.update())
+    btn_guardar_menu = ft.Button("Guardar", bgcolor="#00704A", color=ft.Colors.WHITE, on_click=guardar_novo_produto)
+    btn_fechar_menu = ft.TextButton("Fechar", on_click=lambda e: setattr(painel_novo_produto, "visible", False) or page.update())
+
 
     painel_novo_produto = ft.Container(
         visible=False, bgcolor="#E8F5E9", padding=12, border_radius=10, border=ft.Border.all(1, "#00704A"),
@@ -351,8 +352,9 @@ def main(page: ft.Page):
     def sair(e):
         cancelar_edicao(); sessao["utilizador"] = None; campo_user.value, campo_pin.value, campo_seguranca.value, mensagem_erro.value = "", "", "", ""; campo_seguranca.visible = False; mostrar_ecra_login()
 
-    botao_publicar = ft.Button(bgcolor="#00704A", color=ft.Colors.WHITE, expand=True, height=42, on_click=guardar_review)
-    botao_cancelar = ft.Button(bgcolor=ft.Colors.GREY_400, color=ft.Colors.BLACK, height=42, visible=False, on_click=cancelar_edicao)
+    botao_publicar = ft.Button("Publicar", bgcolor="#00704A", color=ft.Colors.WHITE, expand=True, height=42, on_click=guardar_review)
+    botao_cancelar = ft.Button("Cancelar", bgcolor=ft.Colors.GREY_400, color=ft.Colors.BLACK, height=42, visible=False, on_click=cancelar_edicao)
+
 
     def mostrar_ecra_principal():
         dropdown_produto.label = t("escolha_prod")
