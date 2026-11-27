@@ -2,6 +2,21 @@ import os
 import re
 import flet as ft
 import hashlib
+from deep_translator import GoogleTranslator
+
+cache_traducoes = {}
+
+def traduzir_comentario(texto, idioma_destino):
+    if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
+        return texto
+    chave = (texto, idioma_destino)
+    if chave not in cache_traducoes:
+        try:
+            cache_traducoes[chave] = GoogleTranslator(source="auto", target=idioma_destino).translate(texto)
+        except Exception:
+            return texto
+    return cache_traducoes[chave]
+
 from supabase import create_client, Client
 
 SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
