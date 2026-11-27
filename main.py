@@ -4,7 +4,7 @@ import flet as ft
 import hashlib
 from supabase import create_client, Client
 
-SUPABASE_URL = "https://supabase.co"
+SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
 SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
