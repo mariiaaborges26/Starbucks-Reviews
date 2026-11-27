@@ -169,10 +169,9 @@ def main(page: ft.Page):
     mensagem_erro = ft.Text(color=ft.Colors.RED_600, size=14)
 
     def fazer_login(e):
-        nome = " ".join(campo_user.value.split())
-        pin = campo_pin.value.strip()
         mensagem_erro.color = ft.Colors.RED_600
         nome = " ".join(campo_user.value.split())
+        pin = campo_pin.value.strip()
         if not nome or not pin:
             mensagem_erro.value = t("err_vazio"); page.update(); return
         mensagem_erro.value = t("verificando"); page.update()
