@@ -13,25 +13,43 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 cache_traducoes = {}
-
 def traduzir_texto(texto, idioma_destino):
     if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
         return texto
     chave = (texto, idioma_destino)
-    if chave not in cache_traducoes:
-        try:
-            q = urllib.parse.quote(texto)
-            url = f"https://googleapis.com{q}"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            resp = urllib.request.urlopen(req, timeout=5)
-            dados = json.loads(resp.read().decode("utf-8"))
-            blocos = next(iter(dados), [])
-            trad = "".join(next(iter(b), "") for b in blocos if b)
-            cache_traducoes[chave] = trad if trad else texto
-        except Exception:
-            return texto
-    return cache_traducoes[chave]
+    if chave in cache_traducoes:
+        return cache_traducoes[chave]
 
+    q = urllib.parse.quote(texto)
+
+    # Tentativa 1: Google Translate API pública
+    try:
+        url1 = f"https://googleapis.com{q}"
+        req1 = urllib.request.Request(url1, headers={"User-Agent": "Mozilla/5.0"})
+        resp1 = urllib.request.urlopen(req1, timeout=5)
+        dados1 = json.loads(resp1.read().decode("utf-8"))
+        blocos = next(iter(dados1), [])
+        trad = "".join(next(iter(b), "") for b in blocos if isinstance(b, list))
+        if trad and trad.strip():
+            cache_traducoes[chave] = trad
+            return trad
+    except Exception:
+        pass
+
+    # Tentativa 2: MyMemory API
+    try:
+        url2 = f"https://translated.net{q}&langpair=pt|en"
+        req2 = urllib.request.Request(url2, headers={"User-Agent": "Mozilla/5.0"})
+        resp2 = urllib.request.urlopen(req2, timeout=5)
+        dados2 = json.loads(resp2.read().decode("utf-8"))
+        trad2 = dados2.get("responseData", {}).get("translatedText", "")
+        if trad2 and trad2.strip():
+            cache_traducoes[chave] = trad2
+            return trad2
+    except Exception:
+        pass
+
+    return texto
 
 
 TEXTOS = {
