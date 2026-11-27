@@ -21,10 +21,11 @@ def traduzir_texto(texto, idioma_destino):
     if chave not in cache_traducoes:
         try:
             q = urllib.parse.quote(texto)
-            url = f"https://translated.net{q}&langpair=pt|en"
-            req = urllib.request.urlopen(url, timeout=4)
-            dados = json.loads(req.read().decode("utf-8"))
-            trad = dados.get("responseData", {}).get("translatedText")
+            url = f"https://googleapis.com{q}"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            resp = urllib.request.urlopen(req, timeout=5)
+            dados = json.loads(resp.read().decode("utf-8"))
+            trad = "".join(parte[0] for parte in dados[0] if parte[0])
             cache_traducoes[chave] = trad if trad else texto
         except Exception:
             return texto
@@ -170,6 +171,8 @@ def main(page: ft.Page):
     def fazer_login(e):
         nome = " ".join(campo_user.value.split())
         pin = campo_pin.value.strip()
+        mensagem_erro.color = ft.Colors.RED_600
+        nome = " ".join(campo_user.value.split())
         if not nome or not pin:
             mensagem_erro.value = t("err_vazio"); page.update(); return
         mensagem_erro.value = t("verificando"); page.update()
@@ -423,7 +426,11 @@ def main(page: ft.Page):
             ft.dropdown.Option("Anual", t("Anual")),
             ft.dropdown.Option("Sazonal", t("Sazonal"))
         ]
-        painel_filtros = ft.Row([filtro_cat, filtro_epoca], visible=False)
+        painel_filtros = ft.Column([
+            barra_pesquisa,
+            ft.Row([filtro_cat, filtro_epoca])
+        ], visible=False, spacing=8)
+
         page.clean()
         carregar_catalogo()
         page.add(
@@ -438,19 +445,15 @@ def main(page: ft.Page):
             ft.Row([nota, ft.Container(comentario, expand=True)]),
             ft.Row([botao_publicar, botao_cancelar]),
             ft.Divider(height=15, color="#00704A"),
-            barra_pesquisa,
             ft.Row([
-                ft.Container(barra_pesquisa, expand=True),
                 ft.OutlinedButton(
                     t("filtros"),
                     icon=ft.Icons.FILTER_LIST,
-                    height=48,
                     on_click=lambda e: setattr(painel_filtros, "visible", not painel_filtros.visible) or page.update()
-    )
-]),
-painel_filtros,
-lista_visual
-
+                )
+            ]),
+            painel_filtros,
+            lista_visual
         )
         atualizar_lista()
 
