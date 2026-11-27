@@ -176,11 +176,12 @@ def main(page: ft.Page):
             mensagem_erro.value = t("err_vazio"); page.update(); return
         mensagem_erro.value = t("verificando"); page.update()
         res = supabase.table("utilizadores").select("*").eq("nome_chave", nome.lower()).execute()
-        if not res.data:
+        utilizador_db = next(iter(res.data), None)
+        if not utilizador_db:
             mensagem_erro.value = t("err_nao_enc"); page.update(); return
-        if res.data[0]["pin"] != encriptar_texto(pin):
+        if utilizador_db["pin"] != encriptar_texto(pin):
             mensagem_erro.value = t("err_pin_inc"); page.update(); return
-        sessao["utilizador"] = res.data[0]["nome_original"]
+        sessao["utilizador"] = utilizador_db["nome_original"]
         campo_pin.value, mensagem_erro.value = "", ""
         mostrar_ecra_principal()
 
@@ -228,7 +229,8 @@ def main(page: ft.Page):
             if not password_segura(npin):
                 rec_msg.value = t("err_pass_fraca"); page.update(); return
             res = supabase.table("utilizadores").select("*").eq("nome_chave", nome.lower()).execute()
-            if not res.data or res.data[0]["palavra_seguranca"] != encriptar_texto(seg):
+            utilizador_db = next(iter(res.data), None)
+            if not utilizador_db or utilizador_db["palavra_seguranca"] != encriptar_texto(seg):
                 rec_msg.value = t("err_pin_inc"); page.update(); return
             supabase.table("utilizadores").update({"pin": encriptar_texto(npin)}).eq("nome_chave", nome.lower()).execute()
             mensagem_erro.color = "#00704A"; mensagem_erro.value = t("pin_alterado")
