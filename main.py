@@ -2,27 +2,26 @@ import os
 import re
 import flet as ft
 import hashlib
-from deep_translator import GoogleTranslator
-
-cache_traducoes = {}
-
-def traduzir_comentario(texto, idioma_destino):
-    if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
-        return texto
-    chave = (texto, idioma_destino)
-    if chave not in cache_traducoes:
-        try:
-            cache_traducoes[chave] = GoogleTranslator(source="auto", target=idioma_destino).translate(texto)
-        except Exception:
-            return texto
-    return cache_traducoes[chave]
-
 from supabase import create_client, Client
+from deep_translator import GoogleTranslator
 
 SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
 SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+cache_traducoes = {}
+
+def traduzir_texto(texto, idioma_destino):
+    if idioma_destino == "pt" or not texto or texto in ["Sem comentário.", "No comment."]:
+        return texto
+    chave = (texto, idioma_destino)
+    if chave not in cache_traducoes:
+        try:
+            cache_traducoes[chave] = GoogleTranslator(source="auto", target="en").translate(texto)
+        except Exception:
+            return texto
+    return cache_traducoes[chave]
 
 TEXTOS = {
     "pt": {
@@ -46,7 +45,7 @@ TEXTOS = {
         "pin_alterado": "Palavra-passe alterada! Já pode entrar.",
         "ola": "Olá",
         "sair": "Sair",
-        "escolha_prod": "Escolha o produto Starbucks",
+        "escolha_prod": "Escolha o produto",
         "add_menu_titulo": "➕ Adicionar Produto ao Menu Global",
         "novo_prod_nome": "Nome da nova bebida/comida",
         "categoria": "Categoria",
@@ -63,7 +62,12 @@ TEXTOS = {
         "sem_coment": "Sem comentário.",
         "por": "por",
         "err_prod_existe": "Esse produto já existe na lista!",
-        "err_esc_prod": "Escolha um produto"
+        "err_esc_prod": "Escolha um produto",
+        "Bebida Quente": "Bebida Quente",
+        "Bebida Fria": "Bebida Fria",
+        "Comida / Pastelaria": "Comida / Pastelaria",
+        "Anual": "Anual",
+        "Sazonal": "Sazonal"
     },
     "en": {
         "user": "Username",
@@ -86,7 +90,7 @@ TEXTOS = {
         "pin_alterado": "Password updated! You can log in now.",
         "ola": "Hello",
         "sair": "Log Out",
-        "escolha_prod": "Choose Starbucks item",
+        "escolha_prod": "Choose item",
         "add_menu_titulo": "➕ Add Item to Global Menu",
         "novo_prod_nome": "New drink/food name",
         "categoria": "Category",
@@ -103,7 +107,12 @@ TEXTOS = {
         "sem_coment": "No comment.",
         "por": "by",
         "err_prod_existe": "This item is already on the list!",
-        "err_esc_prod": "Choose an item"
+        "err_esc_prod": "Choose an item",
+        "Bebida Quente": "Hot Drink",
+        "Bebida Fria": "Cold Drink",
+        "Comida / Pastelaria": "Food / Pastry",
+        "Anual": "Year-round",
+        "Sazonal": "Seasonal"
     }
 }
 
@@ -129,7 +138,7 @@ def main(page: ft.Page):
     catalogo_produtos = []
 
     def t(chave):
-        return TEXTOS[sessao["idioma"]][chave]
+        return TEXTOS[sessao["idioma"]].get(chave, chave)
 
     def mudar_idioma(e):
         sessao["idioma"] = "en" if sessao["idioma"] == "pt" else "pt"
@@ -142,7 +151,7 @@ def main(page: ft.Page):
         label = "🇬🇧 EN" if sessao["idioma"] == "pt" else "🇵🇹 PT"
         return ft.OutlinedButton(label, on_click=mudar_idioma, height=34)
 
-    # --- ECRÃ 1: LOGIN / CRIAR CONTA ---
+    # --- ECRÃ 1: LOGIN ---
     campo_user = ft.TextField(border_radius=10)
     campo_pin = ft.TextField(password=True, can_reveal_password=True, border_radius=10)
     campo_seguranca = ft.TextField(border_radius=10, visible=False)
@@ -182,7 +191,7 @@ def main(page: ft.Page):
 
         existe = supabase.table("utilizadores").select("id").eq("nome_chave", nome.lower()).execute()
         if existe.data:
-            mensagem_erro.value = f"'{nome}' já está em uso / already taken!"; campo_user.focus(); page.update(); return
+            mensagem_erro.value = f"'{nome}' already taken!"; campo_user.focus(); page.update(); return
 
         supabase.table("utilizadores").insert({
             "nome_chave": nome.lower(), "nome_original": nome,
@@ -237,15 +246,11 @@ def main(page: ft.Page):
             ft.TextButton(t("esqueci"), on_click=mostrar_ecra_recuperar)
         )
         page.update()
-    # --- ECRÃ 2: CATÁLOGO, PESQUISA, FILTROS E REVIEWS ---
+    # --- ECRÃ 2: CATÁLOGO E REVIEWS ---
     dropdown_produto = ft.Dropdown(border_radius=10, expand=True)
     novo_prod_nome = ft.TextField(border_radius=10)
-    novo_prod_cat = ft.Dropdown(border_radius=10, expand=True, value="Bebida Fria", options=[
-        ft.dropdown.Option("Bebida Quente"), ft.dropdown.Option("Bebida Fria"), ft.dropdown.Option("Comida / Pastelaria")
-    ])
-    novo_prod_epoca = ft.Dropdown(border_radius=10, expand=True, value="Anual", options=[
-        ft.dropdown.Option("Anual"), ft.dropdown.Option("Sazonal")
-    ])
+    novo_prod_cat = ft.Dropdown(border_radius=10, expand=True, value="Bebida Fria")
+    novo_prod_epoca = ft.Dropdown(border_radius=10, expand=True, value="Anual")
     msg_novo_prod = ft.Text(color=ft.Colors.RED_600, size=12)
 
     def carregar_catalogo(selecionar_nome=None):
@@ -253,7 +258,7 @@ def main(page: ft.Page):
         res = supabase.table("produtos").select("*").order("nome").execute()
         catalogo_produtos = res.data
         dropdown_produto.options = [
-            ft.dropdown.Option(p["nome"], f"{p['nome']} ({p['epoca']})") for p in catalogo_produtos
+            ft.dropdown.Option(p["nome"], f"{p['nome']} ({t(p['epoca'])})") for p in catalogo_produtos
         ]
         if selecionar_nome:
             dropdown_produto.value = selecionar_nome
@@ -274,7 +279,6 @@ def main(page: ft.Page):
     btn_guardar_menu = ft.Button("Guardar", bgcolor="#00704A", color=ft.Colors.WHITE, on_click=guardar_novo_produto)
     btn_fechar_menu = ft.TextButton("Fechar", on_click=lambda e: setattr(painel_novo_produto, "visible", False) or page.update())
 
-
     painel_novo_produto = ft.Container(
         visible=False, bgcolor="#E8F5E9", padding=12, border_radius=10, border=ft.Border.all(1, "#00704A"),
         content=ft.Column([
@@ -293,12 +297,8 @@ def main(page: ft.Page):
     comentario = ft.TextField(multiline=True, min_lines=1, max_lines=3, border_radius=10)
 
     barra_pesquisa = ft.TextField(border_radius=10, on_change=lambda e: atualizar_lista())
-    filtro_cat = ft.Dropdown(border_radius=10, expand=True, value="Todas", on_select=lambda e: atualizar_lista(), options=[
-        ft.dropdown.Option("Todas"), ft.dropdown.Option("Bebida Quente"), ft.dropdown.Option("Bebida Fria"), ft.dropdown.Option("Comida / Pastelaria")
-    ])
-    filtro_epoca = ft.Dropdown(border_radius=10, expand=True, value="Todas", on_select=lambda e: atualizar_lista(), options=[
-        ft.dropdown.Option("Todas"), ft.dropdown.Option("Anual"), ft.dropdown.Option("Sazonal")
-    ])
+    filtro_cat = ft.Dropdown(border_radius=10, expand=True, value="Todas", on_select=lambda e: atualizar_lista())
+    filtro_epoca = ft.Dropdown(border_radius=10, expand=True, value="Todas", on_select=lambda e: atualizar_lista())
 
     lista_visual = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
@@ -306,13 +306,17 @@ def main(page: ft.Page):
         id_edicao[0] = rev["id"]
         dropdown_produto.value, nota.value = rev["produto"], rev["nota"]
         comentario.value = "" if rev["comentario"] in ["Sem comentário.", "No comment."] else rev["comentario"]
-        botao_publicar.text, botao_publicar.bgcolor, botao_cancelar.visible = t("guardar_alt"), "#D97706", True
+        botao_publicar.content = ft.Text(t("guardar_alt"))
+        botao_publicar.bgcolor = "#D97706"
+        botao_cancelar.visible = True
         page.update()
 
     def cancelar_edicao(e=None):
         id_edicao[0] = None
         dropdown_produto.value, comentario.value = None, ""
-        botao_publicar.text, botao_publicar.bgcolor, botao_cancelar.visible = t("publicar"), "#00704A", False
+        botao_publicar.content = ft.Text(t("publicar"))
+        botao_publicar.bgcolor = "#00704A"
+        botao_cancelar.visible = False
         page.update()
 
     def apagar_review(rid):
@@ -336,6 +340,8 @@ def main(page: ft.Page):
             if filtro_epoca.value != "Todas" and info_prod["epoca"] != filtro_epoca.value:
                 continue
 
+            texto_coment = t("sem_coment") if r["comentario"] in ["Sem comentário.", "No comment."] else traduzir_texto(r["comentario"], sessao["idioma"])
+
             acoes = ft.Row(spacing=0)
             if r["utilizador"].lower() == nome_logado:
                 acoes.controls = [
@@ -346,9 +352,8 @@ def main(page: ft.Page):
                 bgcolor="#F1F8F5", border=ft.Border.all(1, "#00704A"), border_radius=12, padding=12,
                 content=ft.Column([
                     ft.Row([ft.Text(r["produto"], weight=ft.FontWeight.BOLD, size=15, color="#00704A", expand=True), ft.Text("⭐" * int(r["nota"])), acoes]),
-                    ft.Text(f"{info_prod['categoria']} ({info_prod['epoca']}) • {t('por')} {r['utilizador']}", size=12, color=ft.Colors.GREY_700),
-                    ft.Text(traduzir_comentario(r["comentario"], sessao["idioma"]), size=14)
-
+                    ft.Text(f"{t(info_prod['categoria'])} ({t(info_prod['epoca'])}) • {t('por')} {r['utilizador']}", size=12, color=ft.Colors.GREY_700),
+                    ft.Text(texto_coment, size=14)
                 ], spacing=4)
             ))
         page.update()
@@ -358,7 +363,7 @@ def main(page: ft.Page):
             dropdown_produto.error_text = t("err_esc_prod"); page.update(); return
         dropdown_produto.error_text = None
         info_prod = next((p for p in catalogo_produtos if p["nome"] == dropdown_produto.value), {"categoria": "Bebida Fria"})
-        dados = {"utilizador": sessao["utilizador"], "produto": dropdown_produto.value, "categoria": info_prod["categoria"], "nota": nota.value, "comentario": comentario.value.strip() or t("sem_coment")}
+        dados = {"utilizador": sessao["utilizador"], "produto": dropdown_produto.value, "categoria": info_prod["categoria"], "nota": nota.value, "comentario": comentario.value.strip() or "Sem comentário."}
         if id_edicao[0] is not None:
             supabase.table("reviews").update(dados).eq("id", id_edicao[0]).execute(); cancelar_edicao()
         else:
@@ -371,22 +376,42 @@ def main(page: ft.Page):
     botao_publicar = ft.Button("Publicar", bgcolor="#00704A", color=ft.Colors.WHITE, expand=True, height=42, on_click=guardar_review)
     botao_cancelar = ft.Button("Cancelar", bgcolor=ft.Colors.GREY_400, color=ft.Colors.BLACK, height=42, visible=False, on_click=cancelar_edicao)
 
-
     def mostrar_ecra_principal():
         dropdown_produto.label = t("escolha_prod")
         txt_add_titulo.value = t("add_menu_titulo")
         novo_prod_nome.label = t("novo_prod_nome")
         novo_prod_cat.label = t("categoria")
+        novo_prod_cat.options = [
+            ft.dropdown.Option("Bebida Quente", t("Bebida Quente")),
+            ft.dropdown.Option("Bebida Fria", t("Bebida Fria")),
+            ft.dropdown.Option("Comida / Pastelaria", t("Comida / Pastelaria"))
+        ]
         novo_prod_epoca.label = t("epoca")
-        btn_guardar_menu.text = t("guardar_menu")
-        btn_fechar_menu.text = t("fechar")
+        novo_prod_epoca.options = [
+            ft.dropdown.Option("Anual", t("Anual")),
+            ft.dropdown.Option("Sazonal", t("Sazonal"))
+        ]
+        btn_guardar_menu.content = ft.Text(t("guardar_menu"))
+        btn_fechar_menu.content = ft.Text(t("fechar"))
         nota.label = t("nota")
         comentario.label = t("opiniao")
-        botao_publicar.text = t("guardar_alt") if id_edicao[0] else t("publicar")
-        botao_cancelar.text = t("cancelar")
+        botao_publicar.content = ft.Text(t("guardar_alt") if id_edicao[0] else t("publicar"))
+        botao_cancelar.content = ft.Text(t("cancelar"))
         barra_pesquisa.label = t("pesquisar")
+
         filtro_cat.label = t("categoria")
+        filtro_cat.options = [
+            ft.dropdown.Option("Todas", t("todas")),
+            ft.dropdown.Option("Bebida Quente", t("Bebida Quente")),
+            ft.dropdown.Option("Bebida Fria", t("Bebida Fria")),
+            ft.dropdown.Option("Comida / Pastelaria", t("Comida / Pastelaria"))
+        ]
         filtro_epoca.label = t("epoca")
+        filtro_epoca.options = [
+            ft.dropdown.Option("Todas", t("todas")),
+            ft.dropdown.Option("Anual", t("Anual")),
+            ft.dropdown.Option("Sazonal", t("Sazonal"))
+        ]
 
         page.clean()
         carregar_catalogo()
