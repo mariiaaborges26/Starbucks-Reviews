@@ -153,7 +153,7 @@ def main(page: ft.Page):
 
     # --- ECRÃ 1: LOGIN ---
     campo_user = ft.TextField(border_radius=10)
-    campo_pin = ft.TextField(password=True, can_reveal_password=True, border_radius=10, on_submit=fazer_login)
+    campo_pin = ft.TextField(password=True, can_reveal_password=True, border_radius=10, on_submit=lambda e: fazer_login(e))
     campo_seguranca = ft.TextField(border_radius=10, visible=False)
     mensagem_erro = ft.Text(color=ft.Colors.RED_600, size=14)
 
