@@ -12,31 +12,62 @@ SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
+def _http_json(req, timeout=10):
+    return json.loads(urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8"))
+
+
 def traduzir_texto(texto, origem, destino):
+    """Devolve a traducao ou None se falhar."""
     if not texto or origem == destino:
         return texto
+
+    chave_deepl = os.environ.get("DEEPL_KEY")
+    if chave_deepl:
+        try:
+            corpo = json.dumps({
+                "text": [texto],
+                "source_lang": origem.upper(),
+                "target_lang": "EN-GB" if destino == "en" else "PT-PT",
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api-free.deepl.com/v2/translate",
+                data=corpo,
+                headers={
+                    "Authorization": f"DeepL-Auth-Key {chave_deepl}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            trad = _http_json(req)["translations"][0]["text"]
+            if trad.strip():
+                return trad
+        except Exception as ex:
+            print("ERRO DEEPL:", repr(ex), flush=True)
+
     q = urllib.parse.quote(texto)
     try:
-        url = ("https://api.mymemory.translated.net/get"
-               f"?q={q}&langpair={origem}|{destino}")
+        url = f"https://api.mymemory.translated.net/get?q={q}&langpair={origem}|{destino}"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        dados = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8"))
-        trad = dados.get("responseData", {}).get("translatedText", "")
+        trad = _http_json(req).get("responseData", {}).get("translatedText", "")
         if trad.strip():
             return trad
     except Exception as ex:
         print("ERRO MYMEMORY:", repr(ex), flush=True)
+
     try:
         url = ("https://translate.googleapis.com/translate_a/single"
                f"?client=gtx&sl={origem}&tl={destino}&dt=t&q={q}")
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        dados = json.loads(urllib.request.urlopen(req, timeout=8).read().decode("utf-8"))
+        dados = _http_json(req)
         trad = "".join(b[0] for b in dados[0] if b and b[0])
         if trad.strip():
             return trad
     except Exception as ex:
         print("ERRO GOOGLE:", repr(ex), flush=True)
+
     return None
+
 
 TEXTOS = {
     "pt": {
@@ -143,6 +174,7 @@ def password_segura(pw):
     tem_numero = bool(re.search(r"\d", pw))
     tem_especial = bool(re.search(r"[^a-zA-Z0-9\s]", pw))
     return tem_letra and tem_numero and tem_especial
+
 def main(page: ft.Page):
     page.title = "Starbucks Reviews"
     page.theme_mode = ft.ThemeMode.LIGHT
@@ -272,6 +304,7 @@ def main(page: ft.Page):
             ft.TextButton(t("esqueci"), on_click=mostrar_ecra_recuperar)
         )
         page.update()
+
     # --- ECRÃ 2: CATÁLOGO E REVIEWS ---
     dropdown_produto = ft.Dropdown(border_radius=10, expand=True)
     novo_prod_nome = ft.TextField(border_radius=10)
@@ -366,7 +399,7 @@ def main(page: ft.Page):
             if filtro_epoca.value != "Todas" and info_prod["epoca"] != filtro_epoca.value:
                 continue
 
-                        if r["comentario"] in ["Sem comentário.", "No comment."]:
+            if r["comentario"] in ["Sem comentário.", "No comment."]:
                 texto_coment = t("sem_coment")
             else:
                 texto_coment = r.get("comentario_" + sessao["idioma"]) or r["comentario"]
@@ -393,7 +426,8 @@ def main(page: ft.Page):
             dropdown_produto.error_text = t("err_esc_prod"); page.update(); return
         dropdown_produto.error_text = None
         info_prod = next((p for p in catalogo_produtos if p["nome"] == dropdown_produto.value), {"categoria": "Bebida Fria"})
-                texto = comentario.value.strip()
+
+        texto = comentario.value.strip()
         idioma = sessao["idioma"]
         outro = "en" if idioma == "pt" else "pt"
         trad = traduzir_texto(texto, idioma, outro) if texto else None
@@ -406,6 +440,7 @@ def main(page: ft.Page):
             "comentario_pt": (texto if idioma == "pt" else trad) if texto else None,
             "comentario_en": (texto if idioma == "en" else trad) if texto else None,
         }
+
         if id_edicao[0] is not None:
             supabase.table("reviews").update(dados).eq("id", id_edicao[0]).execute(); cancelar_edicao()
         else:
