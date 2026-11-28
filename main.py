@@ -227,7 +227,7 @@ def main(page: ft.Page):
         campo_pin.value, mensagem_erro.value = "", ""
         mostrar_ecra_principal()
 
-        def nome_existe(nome):
+    def nome_existe(nome):
         res = supabase.table("utilizadores").select("id").eq("nome_chave", nome.lower()).execute()
         return bool(res.data)
 
