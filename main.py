@@ -11,7 +11,7 @@ SUPABASE_URL = "https://bnnprbudzqtkbaagoasw.supabase.co"
 SUPABASE_KEY = "sb_publishable_h4ztQ1CapJXv_35DP3xcBw_TQ3T347Z"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
+ADMIN_USER = os.environ.get("ADMIN_USER", "mariiaaborges").lower()
 
 def _http_json(req, timeout=10):
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8"))
@@ -192,6 +192,9 @@ def main(page: ft.Page):
 
     def t(chave):
         return TEXTOS[sessao["idioma"]].get(chave, chave)
+        
+    def e_admin():
+        return (sessao["utilizador"] or "").lower() == ADMIN_USER
 
     def mudar_idioma(e):
         sessao["idioma"] = "en" if sessao["idioma"] == "pt" else "pt"
