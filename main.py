@@ -114,7 +114,9 @@ TEXTOS = {
         "Comida / Pastelaria": "Comida / Pastelaria",
         "Anual": "Anual",
         "Sazonal": "Sazonal",
-        "filtros": "Filtros"
+        "filtros": "Filtros",
+        "err_nome_existe": "Já existe alguém com esse nome de utilizador!",
+        "confirmar_apagar": "Clique outra vez para apagar"
     },
     "en": {
         "user": "Username",
@@ -160,7 +162,9 @@ TEXTOS = {
         "Comida / Pastelaria": "Food / Pastry",
         "Anual": "Year-round",
         "Sazonal": "Seasonal",
-        "filtros": "Filters"
+        "filtros": "Filters",
+        "err_nome_existe": "Someone already has that username!",
+        "confirmar_apagar": "Click again to delete"
     }
 }
 
@@ -223,26 +227,34 @@ def main(page: ft.Page):
         campo_pin.value, mensagem_erro.value = "", ""
         mostrar_ecra_principal()
 
+        def nome_existe(nome):
+        res = supabase.table("utilizadores").select("id").eq("nome_chave", nome.lower()).execute()
+        return bool(res.data)
+
     def criar_conta(e):
+        nome = " ".join(campo_user.value.split())
+        mensagem_erro.color = ft.Colors.RED_600
+
+        if not nome:
+            mensagem_erro.value = t("err_vazio"); page.update(); return
+        if nome_existe(nome):
+            campo_seguranca.visible = False
+            mensagem_erro.value = t("err_nome_existe")
+            campo_user.focus(); page.update(); return
+
         if not campo_seguranca.visible:
             campo_seguranca.visible = True
             mensagem_erro.color = "#00704A"
             mensagem_erro.value = t("aviso_rec")
             page.update(); return
 
-        nome = " ".join(campo_user.value.split())
         pin = campo_pin.value.strip()
         seguranca = campo_seguranca.value.strip()
-        mensagem_erro.color = ft.Colors.RED_600
 
-        if not nome or not seguranca:
+        if not seguranca:
             mensagem_erro.value = t("err_campos"); page.update(); return
         if not password_segura(pin):
             mensagem_erro.value = t("err_pass_fraca"); page.update(); return
-
-        existe = supabase.table("utilizadores").select("id").eq("nome_chave", nome.lower()).execute()
-        if existe.data:
-            mensagem_erro.value = f"'{nome}' already taken!"; campo_user.focus(); page.update(); return
 
         supabase.table("utilizadores").insert({
             "nome_chave": nome.lower(), "nome_original": nome,
@@ -410,6 +422,10 @@ def main(page: ft.Page):
                     ft.IconButton(icon=ft.Icons.EDIT, icon_color="#00704A", on_click=lambda e, rev=r: iniciar_edicao(rev)),
                     ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_600, on_click=lambda e, rid=r["id"]: apagar_review(rid))
                 ]
+            elif e_admin():
+                acoes.controls = [
+                    ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_600, on_click=lambda e, rid=r["id"]: apagar_review(rid))
+                ]
             lista_visual.controls.append(ft.Container(
                 bgcolor="#F1F8F5", border=ft.Border.all(1, "#00704A"), border_radius=12, padding=12,
                 content=ft.Column([
@@ -452,7 +468,25 @@ def main(page: ft.Page):
 
     botao_publicar = ft.Button("Publicar", bgcolor="#00704A", color=ft.Colors.WHITE, expand=True, height=42, on_click=guardar_review)
     botao_cancelar = ft.Button("Cancelar", bgcolor=ft.Colors.GREY_400, color=ft.Colors.BLACK, height=42, visible=False, on_click=cancelar_edicao)
+    msg_admin = ft.Text(size=12, color=ft.Colors.RED_600)
+    pendente_apagar = [None]
 
+    def apagar_produto(e):
+        nome = dropdown_produto.value
+        if not nome:
+            msg_admin.value = t("err_esc_prod"); page.update(); return
+        if pendente_apagar[0] != nome:
+            pendente_apagar[0] = nome
+            msg_admin.value = f"{t('confirmar_apagar')} '{nome}'"
+            page.update(); return
+        supabase.table("reviews").delete().eq("produto", nome).execute()
+        supabase.table("produtos").delete().eq("nome", nome).execute()
+        pendente_apagar[0] = None
+        msg_admin.value = ""
+        dropdown_produto.value = None
+        carregar_catalogo()
+        atualizar_lista()
+        
     def mostrar_ecra_principal():
         dropdown_produto.label = t("escolha_prod")
         txt_add_titulo.value = t("add_menu_titulo")
@@ -503,8 +537,9 @@ def main(page: ft.Page):
                 ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda e: (carregar_catalogo(), atualizar_lista())),
                 ft.TextButton(t("sair"), icon=ft.Icons.LOGOUT, on_click=sair)
             ]),
-            ft.Row([dropdown_produto, ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color="#00704A", icon_size=32, on_click=lambda e: setattr(painel_novo_produto, "visible", True) or page.update())]),
-            painel_novo_produto,
+            ft.Row([dropdown_produto, ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color="#00704A", icon_size=32, on_click=lambda e: setattr(painel_novo_produto, "visible", True) or page.update())]
+                 + ([ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_600, icon_size=28, tooltip="Admin", on_click=apagar_produto)] if e_admin() else [])),
+            msg_admin,
             ft.Row([nota, ft.Container(comentario, expand=True)]),
             ft.Row([botao_publicar, botao_cancelar]),
             ft.Divider(height=15, color="#00704A"),
